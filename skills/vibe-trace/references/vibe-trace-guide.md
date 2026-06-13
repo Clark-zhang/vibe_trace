@@ -44,7 +44,14 @@ npm run typecheck
 npm run build
 ```
 
-The local server is expected at `http://localhost:4317`. `npm run import:local` scans supported local agent histories and writes unified trace JSON files under `VIBETRACE_HOME` or `~/.vibetrace`.
+The local server defaults to `http://localhost:4317`. If that port is busy,
+the server automatically tries nearby ports such as `4318` and prints the
+actual `Vibe Trace local UI: ...` URL in the startup log. When a skill or agent
+reports the UI URL, prefer the printed URL or verify `/api/health` instead of
+assuming `4317`.
+
+`npm run import:local` scans supported local agent histories and writes unified
+trace JSON files under `VIBETRACE_HOME` or `~/.vibetrace`.
 
 Useful smoke imports:
 

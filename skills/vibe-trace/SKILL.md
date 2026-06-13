@@ -17,6 +17,7 @@ Default to local-only behavior. Do not upload or publish a trace unless the user
    - Create a new trace JSON: run `scripts/create_trace_skeleton.py`.
    - Validate or repair an existing trace: run `scripts/check_trace.py` and load `references/trace.schema.json` as needed.
    - Convert agent history: follow the adapter workflow in `references/vibe-trace-guide.md`.
+   - Run or inspect the local UI: use `npm run dev`, then report the `Vibe Trace local UI: ...` URL printed by the server.
    - Prepare for sharing: run validation, inspect privacy findings, redact locally, then ask for explicit publish confirmation.
 2. Preserve raw intent:
    - Keep user prompts, assistant summaries, tool names, command snippets, file paths, diffs, test commands, and checkpoint labels.
@@ -33,6 +34,7 @@ Default to local-only behavior. Do not upload or publish a trace unless the user
 - Store Git information even when partial. Use `null` for unknown `repo_root`, `branch`, or `head_sha`; use empty arrays for changed or untracked files.
 - Record checkpoints as Git-native recovery points when possible. Prefer commit SHAs or hidden refs such as `refs/vibetrace/<trace_id>/<checkpoint_id>`.
 - Put suspicious secrets in `privacy_findings` and corresponding replacements in `redactions`; do not silently drop sensitive content without noting what changed.
+- The local UI defaults to `http://127.0.0.1:4317`, but the server may use a nearby port when the default is busy. Trust the startup log or verify `/api/health` before reporting the URL.
 
 ## Adapter Workflow
 

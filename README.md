@@ -7,7 +7,9 @@ This first local slice includes:
 - Unified Trace JSON Schema and TypeScript types.
 - A generic JSON/JSONL parser plus a manual file adapter.
 - A local file store under `VIBETRACE_HOME` or `~/.vibetrace`.
-- A local Web UI served at `http://localhost:4317`.
+- A local Web UI served at `http://localhost:4317` by default.
+  If that port is busy, the server automatically tries the next ports and
+  prints the actual URL in the startup log.
 
 ## Develop
 
@@ -17,6 +19,9 @@ npm run dev
 ```
 
 The server seeds one fixture trace into the local store when the store is empty.
+Open the URL printed as `Vibe Trace local UI: ...`; the default is
+`http://127.0.0.1:4317`, but it may be `4318` or another nearby port when the
+default is already in use. Set `PORT` to request a specific starting port.
 
 ## Useful Commands
 
