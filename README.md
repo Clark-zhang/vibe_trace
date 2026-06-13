@@ -44,17 +44,29 @@ npm run import:local -- --sources=codex,claude_code
 
 This repository includes an installable Codex skill at `skills/vibe-trace`.
 
-From GitHub:
+### Install from GitHub
 
-```bash
-python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py --repo <owner>/<repo> --path skills/vibe-trace
+In Codex, ask:
+
+```text
+Use $skill-installer to install https://github.com/Clark-zhang/vibe_trace/tree/main/skills/vibe-trace
 ```
 
-From a local checkout:
+Restart Codex after installing the skill.
+
+Command-line alternative:
+
+```bash
+python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
+  --repo Clark-zhang/vibe_trace \
+  --path skills/vibe-trace
+```
+
+### Install from a Local Checkout
 
 ```bash
 mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
 cp -R skills/vibe-trace "${CODEX_HOME:-$HOME/.codex}/skills/"
 ```
 
-Restart Codex after installing the skill.
+Then restart Codex.
