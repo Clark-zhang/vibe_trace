@@ -1,0 +1,45 @@
+{
+  "name": "vibe-trace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local-first AI coding trace viewer and parser.",
+  "scripts": {
+    "dev": "tsx src/local/server.ts",
+    "dev:api": "tsx src/local/server.ts",
+    "dev:ui": "vite --host 127.0.0.1",
+    "build": "tsc && vite build",
+    "build:api": "tsc",
+    "build:ui": "vite build",
+    "start": "node dist/local/server.js",
+    "seed": "tsx src/local/seed.ts",
+    "import:local": "tsx src/local/importAgents.ts",
+    "test": "node --import tsx --test src/**/*.test.ts",
+    "typecheck": "tsc --noEmit && tsc -p frontend/tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@radix-ui/react-slot": "^1.2.5",
+    "@tailwindcss/vite": "^4.3.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "express": "^5.1.0",
+    "lucide-react": "^1.18.0",
+    "motion": "^12.40.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss": "^4.3.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "vite": "^8.0.16"
+  }
+}

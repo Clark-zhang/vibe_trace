@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vibe Trace"
+  short_description: "Capture and shape local AI coding traces"
+  default_prompt: "Use $vibe-trace to convert this AI coding session into a local Vibe Trace JSON file."

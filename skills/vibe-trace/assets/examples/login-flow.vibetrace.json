@@ -1,0 +1,181 @@
+{
+  "schema_version": "0.1.0",
+  "trace_id": "trace_fixture_login_flow",
+  "source": "fixture",
+  "source_session_id": "fixture-login-flow-001",
+  "title": "Login flow repair with checkpoint",
+  "summary": "A compact fixture showing prompt, tool use, file edits, git state, and a manual checkpoint.",
+  "workspace": {
+    "name": "vibe-trace-demo",
+    "path": "/Users/example/Project/vibe-trace-demo",
+    "repo_url": "https://github.com/example/vibe-trace-demo"
+  },
+  "started_at": "2026-06-12T07:02:00.000Z",
+  "ended_at": "2026-06-12T07:28:00.000Z",
+  "messages": [
+    {
+      "message_id": "msg_fixture_001",
+      "role": "user",
+      "content": "The login page accepts bad passwords after the latest refactor. Please trace the auth path and fix it.",
+      "created_at": "2026-06-12T07:02:00.000Z",
+      "model": null,
+      "parent_id": null,
+      "tool_call_ids": [],
+      "privacy_findings": [],
+      "metadata": {}
+    },
+    {
+      "message_id": "msg_fixture_002",
+      "role": "assistant",
+      "content": "I will inspect the auth route, the password verifier, and the tests around failed login attempts.",
+      "created_at": "2026-06-12T07:03:10.000Z",
+      "model": "gpt-5-codex",
+      "parent_id": "msg_fixture_001",
+      "tool_call_ids": ["tool_fixture_001", "tool_fixture_002"],
+      "privacy_findings": [],
+      "metadata": {}
+    },
+    {
+      "message_id": "msg_fixture_003",
+      "role": "assistant",
+      "content": "The refactor inverted the verifier result when converting callback logic to async/await. I restored the negative branch and added a regression test.",
+      "created_at": "2026-06-12T07:19:30.000Z",
+      "model": "gpt-5-codex",
+      "parent_id": "msg_fixture_002",
+      "tool_call_ids": ["tool_fixture_003"],
+      "privacy_findings": [],
+      "metadata": {}
+    },
+    {
+      "message_id": "msg_fixture_004",
+      "role": "user",
+      "content": "/trace checkpoint login rejection fixed",
+      "created_at": "2026-06-12T07:25:00.000Z",
+      "model": null,
+      "parent_id": "msg_fixture_003",
+      "tool_call_ids": [],
+      "privacy_findings": [],
+      "metadata": {}
+    }
+  ],
+  "tool_calls": [
+    {
+      "tool_call_id": "tool_fixture_001",
+      "message_id": "msg_fixture_002",
+      "name": "read_file",
+      "created_at": "2026-06-12T07:04:00.000Z",
+      "status": "succeeded",
+      "arguments": {
+        "path": "src/server/auth.ts"
+      },
+      "metadata": {}
+    },
+    {
+      "tool_call_id": "tool_fixture_002",
+      "message_id": "msg_fixture_002",
+      "name": "read_file",
+      "created_at": "2026-06-12T07:05:00.000Z",
+      "status": "succeeded",
+      "arguments": {
+        "path": "tests/auth.test.ts"
+      },
+      "metadata": {}
+    },
+    {
+      "tool_call_id": "tool_fixture_003",
+      "message_id": "msg_fixture_003",
+      "name": "run_command",
+      "created_at": "2026-06-12T07:22:00.000Z",
+      "status": "succeeded",
+      "arguments": {
+        "cmd": "npm test -- auth"
+      },
+      "metadata": {}
+    }
+  ],
+  "tool_results": [
+    {
+      "tool_result_id": "result_fixture_001",
+      "tool_call_id": "tool_fixture_003",
+      "created_at": "2026-06-12T07:24:00.000Z",
+      "status": "succeeded",
+      "content": "PASS tests/auth.test.ts\n3 tests passed",
+      "privacy_findings": [],
+      "metadata": {}
+    }
+  ],
+  "file_changes": [
+    {
+      "file_change_id": "file_fixture_001",
+      "path": "src/server/auth.ts",
+      "change_type": "modified",
+      "old_path": null,
+      "language": "typescript",
+      "additions": 8,
+      "deletions": 4,
+      "diff": "diff --git a/src/server/auth.ts b/src/server/auth.ts\n--- a/src/server/auth.ts\n+++ b/src/server/auth.ts\n@@\n-  if (await verifyPassword(input.password, user.passwordHash)) {\n+  if (!(await verifyPassword(input.password, user.passwordHash))) {\n     throw new AuthError('Invalid credentials');\n   }",
+      "metadata": {}
+    },
+    {
+      "file_change_id": "file_fixture_002",
+      "path": "tests/auth.test.ts",
+      "change_type": "modified",
+      "old_path": null,
+      "language": "typescript",
+      "additions": 16,
+      "deletions": 0,
+      "diff": null,
+      "metadata": {}
+    }
+  ],
+  "checkpoints": [
+    {
+      "checkpoint_id": "checkpoint_fixture_001",
+      "trace_id": "trace_fixture_login_flow",
+      "label": "login rejection fixed",
+      "kind": "manual",
+      "reason": "user_marked",
+      "created_at": "2026-06-12T07:25:10.000Z",
+      "git": {
+        "repo_root": "/Users/example/Project/vibe-trace-demo",
+        "branch": "fix/login-rejection",
+        "head_sha": "8f14e45fceea167a5a36dedd4bea2543",
+        "hidden_ref": "refs/vibetrace/trace_fixture_login_flow/checkpoint_fixture_001",
+        "is_dirty": true
+      },
+      "diff_ref": "patches/checkpoint_fixture_001.patch",
+      "test_status": "passed",
+      "metadata": {}
+    }
+  ],
+  "git": {
+    "repo_root": "/Users/example/Project/vibe-trace-demo",
+    "remote_url": "https://github.com/example/vibe-trace-demo",
+    "branch": "fix/login-rejection",
+    "head_sha": "8f14e45fceea167a5a36dedd4bea2543",
+    "is_dirty": true,
+    "changed_files": ["src/server/auth.ts", "tests/auth.test.ts"],
+    "untracked_files": [],
+    "diff": null,
+    "commit_message": null,
+    "pr_url": null,
+    "issue_url": null,
+    "test_command": "npm test -- auth",
+    "test_result": "passed",
+    "metadata": {}
+  },
+  "artifacts": [],
+  "privacy_findings": [],
+  "redactions": [],
+  "publish": {
+    "visibility": "local",
+    "description": "Fixture trace for the local Vibe Trace UI.",
+    "tags": ["auth", "checkpoint", "fixture"],
+    "outcome": "Bad password rejection restored and covered by tests.",
+    "published_url": null,
+    "metadata": {}
+  },
+  "metadata": {
+    "fixture": true
+  }
+}
