@@ -45,11 +45,11 @@ npm run import:local -- --limit-per-source=3
 npm run import:local -- --sources=codex,claude_code
 ```
 
-## Codex Skill
+## AI Agent Skills
 
-This repository includes an installable Codex skill at `skills/vibe-trace`.
+This repository includes installable skills for Codex and Claude Code.
 
-### Install from GitHub
+### Codex
 
 In Codex, ask:
 
@@ -67,7 +67,7 @@ python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-githu
   --path skills/vibe-trace
 ```
 
-### Install from a Local Checkout
+Install the Codex skill from a local checkout:
 
 ```bash
 mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
@@ -75,3 +75,33 @@ cp -R skills/vibe-trace "${CODEX_HOME:-$HOME/.codex}/skills/"
 ```
 
 Then restart Codex.
+
+### Claude Code
+
+This repository includes a Claude Code project skill at
+`.claude/skills/vibe-trace`. When you open this repository in Claude Code, the
+skill is available as:
+
+```text
+/vibe-trace
+```
+
+To install it as a personal Claude Code skill from GitHub:
+
+```bash
+tmpdir="$(mktemp -d)"
+git clone --depth 1 --filter=blob:none --sparse https://github.com/Clark-zhang/vibe_trace.git "$tmpdir/vibe_trace"
+git -C "$tmpdir/vibe_trace" sparse-checkout set .claude/skills/vibe-trace
+mkdir -p ~/.claude/skills
+cp -R "$tmpdir/vibe_trace/.claude/skills/vibe-trace" ~/.claude/skills/
+rm -rf "$tmpdir"
+```
+
+Then start or restart Claude Code and invoke `/vibe-trace`.
+
+To install it as a personal Claude Code skill from a local checkout:
+
+```bash
+mkdir -p ~/.claude/skills
+cp -R .claude/skills/vibe-trace ~/.claude/skills/
+```
