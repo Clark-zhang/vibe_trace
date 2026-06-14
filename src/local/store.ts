@@ -82,6 +82,7 @@ export interface ProjectReplayToolTypeSummary {
 export interface ProjectReplayUserMessage {
   message_id: string;
   content: string;
+  full_content: string;
   images: UserMessageImageSummary[];
   created_at: string;
   is_truncated: boolean;
@@ -91,6 +92,7 @@ export interface ProjectReplayUserMessage {
 
 export interface ProjectReplayAgentSummary {
   content: string;
+  full_content: string;
   created_at: string | null;
   is_truncated: boolean;
   message_count: number;
@@ -1172,6 +1174,7 @@ function toProjectReplayUserMessage(
   return {
     message_id: message.message_id,
     content: truncateContent(content, PROJECT_REPLAY_USER_LIMIT),
+    full_content: content,
     images: images.map((image, index) => toUserMessageImageSummary(image, trace.trace_id, message.message_id, index)),
     created_at: message.created_at,
     is_truncated: characterCount > PROJECT_REPLAY_USER_LIMIT,
@@ -1195,6 +1198,7 @@ function toProjectReplayAgentSummary(
 
   return {
     content: truncateContent(content, PROJECT_REPLAY_AGENT_LIMIT),
+    full_content: content,
     created_at: createdAt,
     is_truncated: characterCount > PROJECT_REPLAY_AGENT_LIMIT,
     message_count: messages.length,

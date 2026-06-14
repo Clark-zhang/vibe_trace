@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { Maximize2, Pause, Play, RefreshCw, Search, SkipBack, SkipForward, Sparkles } from "lucide-react";
+import { Maximize2, Pause, Play, RefreshCw, Search, SkipBack, SkipForward, Sparkles, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "./components/ui/button";
 import { Card } from "./components/ui/card";
@@ -72,6 +72,7 @@ interface ReplayTurn {
   workspace: WorkspaceInfo;
   user: {
     content: string;
+    full_content?: string;
     created_at: string;
     images: ReplayImage[];
     is_truncated: boolean;
@@ -80,6 +81,7 @@ interface ReplayTurn {
   };
   agent: {
     content: string;
+    full_content?: string;
     created_at: string | null;
     is_truncated: boolean;
     message_count: number;
@@ -487,8 +489,10 @@ function ProjectVideoCard({ group, onOpen }: { group: ProjectGroup; onOpen: () =
         )}
       </Card>
       <div className="grid gap-1">
-        <button className="min-w-0 text-left" type="button" onClick={onOpen}>
-          <strong className="line-clamp-2 text-[15px] font-black leading-tight text-zinc-950">{group.name}</strong>
+        <button className="min-w-0 cursor-pointer text-left group/title" type="button" onClick={onOpen}>
+          <strong className="line-clamp-2 text-[15px] font-black leading-tight text-zinc-950 transition-colors group-hover/title:text-emerald-700">
+            {group.name}
+          </strong>
         </button>
         <p className="text-sm text-zinc-600">
           {formatCompactNumber(group.message_count)} messages · {formatCompactNumber(group.token_count)} tokens
@@ -502,7 +506,7 @@ function ProjectVideoCard({ group, onOpen }: { group: ProjectGroup; onOpen: () =
 
 function ProjectWatch({ group, onBack }: { group: ProjectGroup; onBack: () => void }) {
   const [replay, setReplay] = useState<ReplayResult | null>(null);
-  const [jumpTo, setJumpTo] = useState<{ index: number; nonce: number } | null>(null);
+  const [expandedAgentFrame, setExpandedAgentFrame] = useState<ReplayFrame | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -534,24 +538,27 @@ function ProjectWatch({ group, onBack }: { group: ProjectGroup; onBack: () => vo
         </Button>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(330px,0.65fr)]">
-        <div>{replay ? <ReplayPlayer replay={replay} project={group} jumpTo={jumpTo} /> : <ReplaySkeleton />}</div>
-        <aside className="grid max-h-[calc(100vh-8rem)] gap-3 overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 xl:sticky xl:top-28">
+      <div className="grid gap-5">
+        <div>{replay ? <ReplayPlayer replay={replay} project={group} /> : <ReplaySkeleton />}</div>
+        <section className="grid gap-3 rounded-lg border border-zinc-200 bg-white p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-black">Messages</h2>
             <span className="text-sm font-bold text-zinc-500">{frames.length}</span>
           </div>
-          <div className="grid min-h-0 gap-2 overflow-y-auto pr-1">
+          <div className="grid max-h-[72vh] gap-3 overflow-y-auto pr-1">
             {frames.map((frame, index) => (
               <TranscriptItem
                 key={`${frame.turn.turn_id}-${frame.kind}-${index}`}
                 frame={frame}
-                onClick={() => setJumpTo({ index, nonce: Date.now() })}
+                onOpenFullContent={setExpandedAgentFrame}
               />
             ))}
           </div>
-        </aside>
+        </section>
       </div>
+      {expandedAgentFrame ? (
+        <FullMessageDialog frame={expandedAgentFrame} onClose={() => setExpandedAgentFrame(null)} />
+      ) : null}
     </section>
   );
 }
@@ -560,13 +567,11 @@ function ReplayPlayer({
   replay,
   project,
   compact = false,
-  jumpTo,
   onFullscreenStart,
 }: {
   replay: ReplayResult;
   project?: ProjectGroup;
   compact?: boolean;
-  jumpTo?: { index: number; nonce: number } | null;
   onFullscreenStart?: () => void;
 }) {
   const frames = useMemo(() => projectReplayFrames(replay), [replay]);
@@ -663,14 +668,6 @@ function ReplayPlayer({
       }, ACTIVE_SESSION_BUFFER_MS);
     }
   }, [currentSessionKey, isSplitReplay, pendingSessionKey, replaySessions]);
-
-  useEffect(() => {
-    if (!jumpTo) return;
-    setPlaying(false);
-    setPausedByScroll(false);
-    setFrameIndex(normalizeFrameIndex(jumpTo.index, frames.length));
-    requestAnimationFrame(() => scrollReplayToLatest(feedRef.current, paneRefs.current, suppressScrollRef, isSplitReplay));
-  }, [frames.length, isSplitReplay, jumpTo]);
 
   useEffect(() => {
     if (!playing || frames.length === 0) return;
@@ -979,10 +976,11 @@ function ReplayBubble({
   const speakerName = isAgent ? agentDisplayName(frame.turn.source) : "User";
   const speakerMeta = pending ? "replying" : isAgent ? agentReplyMeta(frame.turn) : formatTime(frame.turn.user.created_at);
   const contentClassName = cn(
-    "overflow-hidden whitespace-pre-wrap break-words text-sm leading-6 text-zinc-800",
+    "overflow-hidden whitespace-pre-wrap break-words text-zinc-800",
+    isAgent ? "text-xs leading-5" : "text-base leading-7",
     isAgent && "replay-agent-content",
-    isAgent && compact && "replay-agent-content-compact",
-    !isAgent && compact && "max-h-20 text-xs leading-5",
+    isAgent && compact && "replay-agent-content-compact text-[11px] leading-4",
+    !isAgent && compact && "max-h-24 text-sm leading-6",
   );
 
   return (
@@ -1060,35 +1058,117 @@ function ReplayTypingDots() {
   );
 }
 
-function TranscriptItem({ frame, onClick }: { frame: ReplayFrame; onClick: () => void }) {
+function TranscriptItem({
+  frame,
+  onOpenFullContent,
+}: {
+  frame: ReplayFrame;
+  onOpenFullContent?: (frame: ReplayFrame) => void;
+}) {
   const isAgent = frame.kind === "agent";
-  const content = isAgent ? frame.turn.agent.content || "Agent activity" : frame.turn.user.content;
+  const content = isAgent
+    ? frame.turn.agent.full_content || frame.turn.agent.content || "Agent activity"
+    : frame.turn.user.full_content || frame.turn.user.content;
   const sessionAccent = sessionColor(frame.turn);
   const speakerName = isAgent ? agentDisplayName(frame.turn.source) : "User";
   const speakerMeta = isAgent ? agentReplyMeta(frame.turn) : formatTime(frame.turn.user.created_at);
+  const shouldShowFullContentButton =
+    isAgent &&
+    Boolean(onOpenFullContent) &&
+    hasHiddenTranscriptContent(content, frame.turn.agent.is_truncated);
 
   return (
-    <button
-      className="grid gap-1 rounded-r-lg border border-l-4 bg-white p-3 text-left transition hover:border-blue-300 hover:shadow-sm"
-      style={{
-        borderLeftColor: sessionAccent.strong,
-        backgroundColor: isAgent ? sessionAccent.agentBackground : sessionAccent.userBackground,
-      }}
-      type="button"
-      onClick={onClick}
-    >
-      <span className={cn("flex gap-3 text-xs font-black", isAgent ? "justify-end text-right" : "justify-between")}>
-        <strong className="min-w-0 truncate">{speakerName} · {speakerMeta} · {sessionLabel(frame.turn)}</strong>
-      </span>
-      <p className="line-clamp-3 whitespace-pre-wrap break-words text-xs leading-5 text-zinc-700">{content}</p>
-      <small className="text-xs font-bold text-zinc-500">
-        {isAgent
-          ? `${frame.turn.agent.tool_call_count} tools`
-          : `${formatCompactNumber(frame.turn.user.estimated_token_count)} tokens${
-              frame.turn.user.images.length ? ` · ${frame.turn.user.images.length} images` : ""
-            }`}
-      </small>
-    </button>
+    <div className={cn("grid", isAgent ? "justify-items-end" : "justify-items-start")}>
+      <article
+        className="grid w-[92%] gap-2 rounded-r-lg border border-l-4 bg-white p-3 text-left shadow-sm sm:w-[82%] xl:w-[74%]"
+        style={{
+          borderLeftColor: sessionAccent.strong,
+          backgroundColor: isAgent ? sessionAccent.agentBackground : sessionAccent.userBackground,
+        }}
+      >
+        <header className={cn("flex min-w-0 items-center gap-2 text-xs font-black", isAgent && "justify-end text-right")}>
+          <strong className="shrink-0 text-zinc-950">{speakerName}</strong>
+          <span className="shrink-0 text-zinc-500">·</span>
+          <span className="shrink-0 text-zinc-500">{speakerMeta}</span>
+          <span className="shrink-0 text-zinc-500">·</span>
+          <span className="min-w-0 truncate text-zinc-400">{sessionLabel(frame.turn)}</span>
+        </header>
+        <p className={cn("whitespace-pre-wrap break-words text-xs leading-5 text-zinc-700", isAgent && "line-clamp-3")}>
+          {content}
+        </p>
+        <footer className="flex flex-wrap items-center gap-2 text-xs font-bold text-zinc-500">
+          <span>
+            {isAgent
+              ? `${frame.turn.agent.tool_call_count} tools`
+              : `${formatCompactNumber(frame.turn.user.estimated_token_count)} tokens${
+                  frame.turn.user.images.length ? ` · ${frame.turn.user.images.length} images` : ""
+                }`}
+          </span>
+          {shouldShowFullContentButton ? (
+            <button
+              className="cursor-pointer rounded-md border border-zinc-200 bg-white px-2 py-1 font-black text-zinc-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
+              type="button"
+              onClick={() => onOpenFullContent?.(frame)}
+            >
+              查看全部
+            </button>
+          ) : null}
+        </footer>
+      </article>
+    </div>
+  );
+}
+
+function hasHiddenTranscriptContent(content: string, isServerTruncated: boolean) {
+  if (isServerTruncated) return true;
+
+  const lines = content.split(/\r?\n/).filter((line) => line.trim().length > 0);
+  return lines.length > 3 || Array.from(content).length > 220;
+}
+
+function FullMessageDialog({ frame, onClose }: { frame: ReplayFrame; onClose: () => void }) {
+  const isAgent = frame.kind === "agent";
+  const content = isAgent
+    ? frame.turn.agent.full_content || frame.turn.agent.content || "Agent activity"
+    : frame.turn.user.full_content || frame.turn.user.content;
+  const speakerName = isAgent ? agentDisplayName(frame.turn.source) : "User";
+  const speakerMeta = isAgent ? agentReplyMeta(frame.turn) : formatTime(frame.turn.user.created_at);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-zinc-950/45 p-4" role="presentation" onClick={onClose}>
+      <section
+        className="grid max-h-[82vh] w-full max-w-4xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Full message"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <header className="flex min-w-0 items-start justify-between gap-4 border-b border-zinc-200 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Message</p>
+            <h3 className="mt-1 truncate text-lg font-black text-zinc-950">
+              {speakerName} · {speakerMeta}
+            </h3>
+            <p className="mt-1 truncate text-xs font-bold text-zinc-400">{sessionLabel(frame.turn)}</p>
+          </div>
+          <Button variant="outline" size="icon" type="button" onClick={onClose} title="Close">
+            <X className="h-4 w-4" />
+          </Button>
+        </header>
+        <div className="overflow-y-auto p-4">
+          <p className="whitespace-pre-wrap break-words text-sm leading-7 text-zinc-800">{content}</p>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -1389,7 +1469,7 @@ function replayFrameStatus(frame: ReplayFrame, index: number, loadedTotal: numbe
 function replayFrameDuration(frame: ReplayFrame | undefined, speed: number) {
   if (!frame) return 300;
   const content = frame.kind === "user" ? frame.turn.user.content : frame.turn.agent.content;
-  const base = frame.kind === "user" ? 800 : 620;
+  const base = frame.kind === "user" ? 800 : 1500;
   const lengthDelay = Math.min(900, Array.from(content || "").length * 4);
   return Math.max(220, Math.round((base + lengthDelay) / speed));
 }
