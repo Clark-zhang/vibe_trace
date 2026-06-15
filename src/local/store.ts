@@ -304,12 +304,14 @@ export class LocalTraceStore {
   async getProjectReplay(filters: ProjectReplayFilters = {}): Promise<ProjectReplayResult> {
     await this.ensure();
 
-    const summaries = (await this.listTraces({ source: filters.source }))
+    const matchingSummaries = (await this.listTraces({ source: filters.source }))
       .filter((summary) => matchesProjectReplaySummary(summary, filters));
     const traces = (
-      await Promise.all(summaries.map(async (summary) => this.getTrace(summary.trace_id)))
+      await Promise.all(matchingSummaries.map(async (summary) => this.getTrace(summary.trace_id)))
     ).filter((trace): trace is Trace => Boolean(trace));
-    const turns = traces
+    const uniqueTraces = dedupeProjectReplayTraces(traces);
+    const summaries = uniqueTraces.map(toTraceSummary);
+    const turns = uniqueTraces
       .flatMap((trace) => buildProjectReplayTurns(trace))
       .filter((turn) => matchesProjectReplayTurn(turn, filters))
       .sort((a, b) => a.user.created_at.localeCompare(b.user.created_at));
@@ -317,7 +319,7 @@ export class LocalTraceStore {
     const shownTurns = turns.slice(0, limit);
 
     return {
-      project: traces[0]?.workspace ?? null,
+      project: uniqueTraces[0]?.workspace ?? null,
       turns: shownTurns,
       stats: {
         turn_count: turns.length,
@@ -326,10 +328,10 @@ export class LocalTraceStore {
         token_count: summaries.reduce((sum, summary) => sum + summary.token_count, 0),
         trace_count: summaries.length,
         tool_call_count: summaries.reduce((sum, summary) => sum + summary.tool_call_count, 0),
-        tool_call_types: summarizeReplayToolCalls(traces.flatMap((trace) => trace.tool_calls)),
+        tool_call_types: summarizeReplayToolCalls(uniqueTraces.flatMap((trace) => trace.tool_calls)),
         file_change_count: summaries.reduce((sum, summary) => sum + summary.file_change_count, 0),
         checkpoint_count: summaries.reduce((sum, summary) => sum + summary.checkpoint_count, 0),
-        model_counts: summarizeReplayModels(traces),
+        model_counts: summarizeReplayModels(uniqueTraces),
         source_counts: summarizeReplaySources(summaries),
       },
     };
@@ -1156,6 +1158,39 @@ function buildProjectReplayTurns(trace: Trace): ProjectReplayTurn[] {
   }
 
   return turns;
+}
+
+function dedupeProjectReplayTraces(traces: Trace[]): Trace[] {
+  const bySession = new Map<string, Trace>();
+
+  for (const trace of traces) {
+    const key = projectReplayTraceKey(trace);
+    const existing = bySession.get(key);
+
+    if (!existing || traceCompletenessScore(trace) > traceCompletenessScore(existing)) {
+      bySession.set(key, trace);
+    }
+  }
+
+  return Array.from(bySession.values()).sort((a, b) => b.started_at.localeCompare(a.started_at));
+}
+
+function projectReplayTraceKey(trace: Trace): string {
+  const workspaceKey = trace.workspace.path || trace.workspace.name || "unknown";
+  const sessionKey = trace.source_session_id || trace.trace_id;
+  return [trace.source, workspaceKey, sessionKey].join("\u001f");
+}
+
+function traceCompletenessScore(trace: Trace): number {
+  const contentCharacters = trace.messages.reduce((sum, message) => sum + Array.from(message.content).length, 0);
+  return (
+    contentCharacters +
+    trace.messages.length * 1_000 +
+    trace.tool_calls.length * 100 +
+    trace.tool_results.length * 50 +
+    trace.file_changes.length * 25 +
+    trace.checkpoints.length * 25
+  );
 }
 
 function toProjectReplayUserMessage(

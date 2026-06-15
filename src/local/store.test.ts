@@ -145,6 +145,31 @@ test("builds project replay turns with compact agent activity", async () => {
   assert.deepEqual(replay.turns[1]?.agent.tool_call_types, [{ name: "apply_patch", count: 1 }]);
 });
 
+test("deduplicates project replay traces for the same source session", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "vibetrace-store-"));
+  const store = new LocalTraceStore(root);
+  const trace = makeReplayTrace();
+  const duplicateTrace = structuredClone(trace);
+
+  duplicateTrace.trace_id = "trace-replay-duplicate-test";
+
+  await store.saveTrace(trace);
+  await store.saveTrace(duplicateTrace);
+
+  const replay = await store.getProjectReplay({
+    workspace: "/tmp/replay-app",
+    limit: 10,
+  });
+
+  assert.equal(replay.stats.trace_count, 1);
+  assert.equal(replay.stats.turn_count, 2);
+  assert.equal(replay.stats.shown_turn_count, 2);
+  assert.deepEqual(
+    replay.turns.map((turn) => turn.user.created_at),
+    ["2026-06-12T00:01:00.000Z", "2026-06-12T00:08:00.000Z"],
+  );
+});
+
 test("excludes Codex chat sessions from project replay", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "vibetrace-store-"));
   const store = new LocalTraceStore(root);
